@@ -664,6 +664,11 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
                             <span className="text-orange-500 text-sm">{oversubscription}:1</span>
                             </div>
                             <input type="range" min="3" max="10" step="0.5" value={oversubscription} onChange={(e) => setOversubscription(Number(e.target.value))} className="w-full accent-orange-500" />
+                            {result.constraint !== 'CPU' && (
+                              <div className={`text-[9px] ${isDark ? 'text-slate-500' : 'text-gray-500'} mt-1 italic`}>
+                                ℹ️ Currently limited by {result.constraint}, not CPU ratio
+                              </div>
+                            )}
                         </div>
 
                         {isVsanEnabled && (
@@ -1108,6 +1113,14 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
                       <div className="flex justify-between">
                           <span className="text-slate-400">Total vCPU Demand:</span>
                           <span>{result.math.totalVcpu}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                          <span>Target CPU Ratio:</span>
+                          <span>{oversubscription.toFixed(1)} : 1</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                          <span>vCPU Slots Per Node:</span>
+                          <span>{result.math.totalSlots}</span>
                       </div>
                       <div className="flex justify-between text-slate-400">
                           <span>Gross Physical Cores:</span>
