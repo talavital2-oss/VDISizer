@@ -109,6 +109,8 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
       if (d.raidPolicy) setRaidPolicy(d.raidPolicy);
       if (d.diskConfigMode) setDiskConfigMode(d.diskConfigMode);
       if (d.manualDiskCount !== undefined) setManualDiskCount(d.manualDiskCount);
+      if (d.isHwLocked !== undefined) setIsHwLocked(d.isHwLocked);
+      if (d.lockedBladeCount !== undefined) setLockedBladeCount(d.lockedBladeCount);
       if (d.importData) setImportData(d.importData);
     }
   }, [project]);
@@ -128,12 +130,14 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
       raidPolicy,
       diskConfigMode,
       manualDiskCount,
+      isHwLocked,
+      lockedBladeCount,
       importData,
     };
     if (onSave) {
       onSave(saveData);
     }
-  }, [configMode, numUsers, vcpuPerUser, ramPerUser, storagePerUser, oversubscription, selectedCpuId, isVsanEnabled, selectedDisk, raidPolicy, diskConfigMode, manualDiskCount, importData, onSave]);
+  }, [configMode, numUsers, vcpuPerUser, ramPerUser, storagePerUser, oversubscription, selectedCpuId, isVsanEnabled, selectedDisk, raidPolicy, diskConfigMode, manualDiskCount, isHwLocked, lockedBladeCount, importData, onSave]);
 
   // --- Workload Profiler Logic ---
   useEffect(() => {
@@ -742,6 +746,67 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                  )}
             </div>
 
+            {/* Manual Host Count Panel */}
+            <div className="bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-800">
+                 <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-bold text-white text-sm flex items-center">
+                        <span className="mr-2 text-orange-500">{isHwLocked ? <Icons.Lock /> : <Icons.Unlock />}</span> Manual Host Count
+                    </h2>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={isHwLocked} onChange={() => setIsHwLocked(!isHwLocked)} className="sr-only peer" />
+                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-900 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                    </label>
+                 </div>
+
+                 {isHwLocked ? (
+                    <div className="space-y-3 animate-fadeIn">
+                        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-xs font-bold text-orange-500 uppercase">Total Hosts (Including Standby)</label>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setLockedBladeCount(Math.max(2, lockedBladeCount - 1))}
+                                        className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-orange-500 rounded font-bold transition-colors"
+                                    >
+                                        −
+                                    </button>
+                                    <span className="text-2xl font-bold text-orange-500 min-w-[3rem] text-center">{lockedBladeCount}</span>
+                                    <button
+                                        onClick={() => setLockedBladeCount(Math.min(50, lockedBladeCount + 1))}
+                                        className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-orange-500 rounded font-bold transition-colors"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                            <input
+                                type="range"
+                                min="2"
+                                max="50"
+                                step="1"
+                                value={lockedBladeCount}
+                                onChange={(e) => setLockedBladeCount(Number(e.target.value))}
+                                className="w-full accent-orange-500"
+                            />
+                            <div className="text-[10px] text-orange-400 mt-2">
+                                <strong>{lockedBladeCount - 1}</strong> Active + <strong>1</strong> Standby = <strong>{Math.ceil(lockedBladeCount / 8)}</strong> Chassis ({Math.ceil(lockedBladeCount / 8) * 7}RU)
+                            </div>
+                        </div>
+
+                        <div className="text-xs text-slate-400 bg-slate-800 p-3 rounded border border-slate-700">
+                            <div className="flex items-start gap-2">
+                                <Icons.Info />
+                                <div>
+                                    <strong className="text-slate-300">Fixed Hardware Mode:</strong> Calculations will show utilization based on the specified host count. Warnings will appear if capacity is insufficient.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                 ) : (
+                    <div className="text-xs text-slate-400 italic">Enable to manually specify the number of hosts instead of auto-calculating.</div>
+                 )}
+            </div>
+
           </div>
 
           {/* CENTER: Results & Visualization */}
@@ -802,17 +867,39 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                 </div>
 
                 {/* Constraint Notification */}
-                <div className="mt-4 p-3 bg-orange-500/100/10 border border-orange-500/20 rounded text-xs text-orange-400 flex items-start">
-                     <span className="mr-2 mt-0.5"><Icons.AlertTriangle /></span>
-                     <div>
-                        <strong>Limiting Factor: {result.constraint}</strong>
-                        <div className="text-orange-500/80">
-                            {result.constraint === 'STORAGE' 
-                                ? "Node count increased to satisfy vSAN capacity or disk-per-node limits." 
-                                : "Hardware sized to keep Load safe at full growth."}
-                        </div>
-                     </div>
-                </div>
+                {!isHwLocked ? (
+                  <div className="mt-4 p-3 bg-orange-500/100/10 border border-orange-500/20 rounded text-xs text-orange-400 flex items-start">
+                       <span className="mr-2 mt-0.5"><Icons.AlertTriangle /></span>
+                       <div>
+                          <strong>Limiting Factor: {result.constraint}</strong>
+                          <div className="text-orange-500/80">
+                              {result.constraint === 'STORAGE'
+                                  ? "Node count increased to satisfy vSAN capacity or disk-per-node limits."
+                                  : "Hardware sized to keep Load safe at full growth."}
+                          </div>
+                       </div>
+                  </div>
+                ) : (
+                  <div className={`mt-4 p-3 border rounded text-xs flex items-start ${
+                    result.cpuLoad > 100 || result.ramUtil > 100
+                      ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                      : result.cpuLoad > 90 || result.ramUtil > 90
+                      ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                      : 'bg-green-500/10 border-green-500/30 text-green-400'
+                  }`}>
+                       <span className="mr-2 mt-0.5"><Icons.AlertTriangle /></span>
+                       <div>
+                          <strong>Manual Host Count Mode</strong>
+                          <div className={result.cpuLoad > 100 || result.ramUtil > 100 ? 'text-red-400/90' : result.cpuLoad > 90 || result.ramUtil > 90 ? 'text-orange-400/90' : 'text-green-400/90'}>
+                              {result.cpuLoad > 100 || result.ramUtil > 100
+                                  ? `⚠️ INSUFFICIENT CAPACITY: Your ${lockedBladeCount} hosts cannot support this workload. ${result.cpuLoad > 100 ? `CPU at ${result.cpuLoad.toFixed(0)}%` : ''} ${result.ramUtil > 100 ? `RAM at ${result.ramUtil.toFixed(0)}%` : ''}. Add more hosts.`
+                                  : result.cpuLoad > 90 || result.ramUtil > 90
+                                  ? `⚠️ HIGH UTILIZATION: Running near capacity limits. Consider adding 1-2 more hosts for safety margin.`
+                                  : `✓ Fixed at ${lockedBladeCount} hosts. Current utilization is within safe operating limits.`}
+                          </div>
+                       </div>
+                  </div>
+                )}
              </div>
 
              {/* Rack View */}
