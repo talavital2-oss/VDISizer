@@ -1,0 +1,16 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fb923c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f97316;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- T Icon -->
+  <rect x="10" y="10" width="40" height="40" rx="8" fill="url(#orangeGradient)" />
+  <text x="30" y="40" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle">T</text>
+
+  <!-- TERASKY Text -->
+  <text x="60" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="url(#orangeGradient)">TERASKY</text>
+</svg>
