@@ -6,6 +6,20 @@ function App() {
   const [currentView, setCurrentView] = useState('home');
   const [currentProject, setCurrentProject] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [theme, setTheme] = useState('dark');
+
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('vdi-theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  // Save theme to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('vdi-theme', theme);
+  }, [theme]);
 
   // Load projects from localStorage on mount
   useEffect(() => {
@@ -71,6 +85,10 @@ function App() {
     setCurrentProject(null);
   };
 
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   if (currentView === 'home') {
     return (
       <HomePage
@@ -78,6 +96,8 @@ function App() {
         onOpenProject={handleOpenProject}
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     );
   }
@@ -87,6 +107,8 @@ function App() {
       project={currentProject}
       onSave={handleSaveProject}
       onBack={handleBackToHome}
+      theme={theme}
+      onToggleTheme={toggleTheme}
     />
   );
 }
