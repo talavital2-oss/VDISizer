@@ -15,7 +15,9 @@ const Icons = {
   Database: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s 9-1.34 9-3V5"></path></svg>,
   Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>,
   Settings: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
-  ArrowLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+  ArrowLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>,
+  Sun: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>,
+  Moon: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
 };
 
 const TeraSkyLogo = () => (
@@ -49,7 +51,8 @@ const RAID_OPTIONS = [
     { id: 'raid6', name: 'RAID 6 (Erasure Coding)', overhead: 1.5, desc: 'Max Safety, 1.5x Overhead' },
 ];
 
-const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
+const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme }) => {
+  const isDark = theme === 'dark';
   const [configMode, setConfigMode] = useState('manual'); 
   const [isVsanEnabled, setIsVsanEnabled] = useState(false);
   
@@ -354,18 +357,18 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
     let color = "bg-emerald-500";
     if (value > 90) color = "bg-red-600";
     else if (value > 75) color = "bg-yellow-500";
-    if (isStorage) color = "bg-orange-500/100/100";
+    if (isStorage) color = "bg-orange-500";
 
     return (
       <div className="mb-4">
         <div className="flex justify-between items-end mb-1">
-          <span className="text-sm font-bold text-slate-200">{label}</span>
-          <span className={`text-sm font-bold ${value > limit ? 'text-red-600' : 'text-slate-300'}`}>
+          <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-gray-700'}`}>{label}</span>
+          <span className={`text-sm font-bold ${value > limit ? 'text-red-600' : (isDark ? 'text-slate-300' : 'text-gray-700')}`}>
             {value.toFixed(1)}%
           </span>
         </div>
-        <div className="w-full bg-slate-700 rounded-full h-3 relative overflow-hidden">
-           {isCpu && <div className="absolute top-0 bottom-0 w-0.5 bg-slate-400 z-10 opacity-50" style={{ left: '75%' }}></div>}
+        <div className={`w-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded-full h-3 relative overflow-hidden`}>
+           {isCpu && <div className={`absolute top-0 bottom-0 w-0.5 ${isDark ? 'bg-slate-400' : 'bg-gray-400'} z-10 opacity-50`} style={{ left: '75%' }}></div>}
            <div className={`h-3 rounded-full transition-all duration-300 ${color}`} style={{ width: `${Math.min(value, 100)}%` }}></div>
         </div>
       </div>
@@ -399,19 +402,19 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
             bladesAllocated++;
         } else {
           slots.push(
-            <div key={s} className="h-full bg-slate-800 rounded-sm border border-slate-700 flex items-center justify-center">
-              <span className="text-[9px] text-slate-300">Empty</span>
+            <div key={s} className={`h-full ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-200 border-gray-300'} rounded-sm border flex items-center justify-center`}>
+              <span className={`text-[9px] ${isDark ? 'text-slate-300' : 'text-gray-500'}`}>Empty</span>
             </div>
           );
         }
       }
       chassis.push(
-        <div key={c} className="bg-slate-800 p-2 rounded-lg shadow-md w-full">
-           <div className="flex justify-between text-xs text-slate-400 mb-2 px-1">
-             <span className="font-mono text-slate-300">Chassis #{c + 1}</span>
+        <div key={c} className={`${isDark ? 'bg-slate-800' : 'bg-gray-100'} p-2 rounded-lg shadow-md w-full`}>
+           <div className={`flex justify-between text-xs ${isDark ? 'text-slate-400' : 'text-gray-600'} mb-2 px-1`}>
+             <span className={`font-mono ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>Chassis #{c + 1}</span>
              <span>X9508</span>
            </div>
-           <div className="grid grid-cols-8 gap-1 h-20 bg-slate-900 border border-slate-700 p-1 rounded">
+           <div className={`grid grid-cols-8 gap-1 h-20 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'} border p-1 rounded`}>
              {slots}
            </div>
         </div>
@@ -421,27 +424,34 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans text-white p-4">
+    <div className={`min-h-screen ${isDark ? 'bg-slate-950' : 'bg-gray-50'} font-sans ${isDark ? 'text-white' : 'text-gray-900'} p-4`}>
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}
-        <div className="mb-6 border-b border-slate-800 pb-6">
+        <div className={`mb-6 border-b ${isDark ? 'border-slate-800' : 'border-gray-200'} pb-6`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={onBack}
-                className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-orange-500"
+                className={`p-2 ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-gray-200 text-gray-600'} hover:text-orange-500 rounded-lg transition-colors`}
                 title="Back to Projects"
               >
                 <Icons.ArrowLeft />
               </button>
+              <button
+                onClick={onToggleTheme}
+                className={`p-2 ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-gray-200 text-gray-600'} hover:text-orange-500 rounded-lg transition-colors`}
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <Icons.Sun /> : <Icons.Moon />}
+              </button>
               <div>
-                <h1 className="text-2xl font-bold text-white flex items-center">
+                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} flex items-center`}>
                   <span className="mr-2 text-orange-500"><Icons.Server /></span>
                   {project?.name || 'VDI Architect'}
                 </h1>
                 {project?.description && (
-                  <p className="text-slate-400 text-sm mt-1">{project.description}</p>
+                  <p className={`${isDark ? 'text-slate-400' : 'text-gray-600'} text-sm mt-1`}>{project.description}</p>
                 )}
               </div>
             </div>
@@ -450,10 +460,10 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
           </div>
 
           <div className="flex space-x-3">
-            <div className="bg-slate-900 p-1 rounded-lg border border-slate-800 shadow-sm flex items-center">
+            <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-1 rounded-lg border shadow-sm flex items-center`}>
                 <button
                   onClick={() => setConfigMode('manual')}
-                  className={`flex items-center px-3 py-1.5 rounded-md text-xs font-bold transition-all ${configMode === 'manual' ? 'bg-orange-500/100/20 text-orange-500' : 'text-slate-400 hover:bg-slate-800'}`}
+                  className={`flex items-center px-3 py-1.5 rounded-md text-xs font-bold transition-all ${configMode === 'manual' ? 'bg-orange-500/20 text-orange-500' : `${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'}`}`}
                 >
                   <span className="mr-1"><Icons.Sliders /></span> Manual Config
                 </button>
@@ -462,7 +472,7 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                     setConfigMode('import');
                     setIsHwLocked(false);
                   }}
-                  className={`flex items-center px-3 py-1.5 rounded-md text-xs font-bold transition-all ${configMode === 'import' ? 'bg-orange-500/100/20 text-orange-500' : 'text-slate-400 hover:bg-slate-800'}`}
+                  className={`flex items-center px-3 py-1.5 rounded-md text-xs font-bold transition-all ${configMode === 'import' ? 'bg-orange-500/20 text-orange-500' : `${isDark ? 'text-slate-400 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'}`}`}
                 >
                   <span className="mr-1"><Icons.Import /></span> Import Workload
                 </button>
@@ -476,37 +486,37 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
           <div className="lg:col-span-4 space-y-6">
             
             {/* CPU Selection */}
-            <div className="bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-800 h-64 flex flex-col">
-              <h2 className="font-bold text-white mb-3 flex items-center text-sm">
+            <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-4 rounded-xl shadow-sm border h-64 flex flex-col`}>
+              <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-3 flex items-center text-sm`}>
                 <span className="mr-2 text-orange-500"><Icons.Cpu /></span> Target Processor
               </h2>
               <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
                 {PROCESSORS.map((cpu) => (
-                  <label 
+                  <label
                     key={cpu.id}
                     className={`flex items-center justify-between p-2 rounded border cursor-pointer transition-all ${
-                      selectedCpuId === cpu.id 
-                      ? 'border-orange-500 bg-orange-500/100/10 ring-1 ring-orange-500' 
-                      : 'border-slate-800 hover:bg-slate-800'
+                      selectedCpuId === cpu.id
+                      ? 'border-orange-500 bg-orange-500/10 ring-1 ring-orange-500'
+                      : `${isDark ? 'border-slate-800 hover:bg-slate-800' : 'border-gray-200 hover:bg-gray-100'}`
                     }`}
                   >
                     <div className="flex items-center">
-                      <input 
-                        type="radio" 
-                        name="cpu" 
-                        value={cpu.id} 
+                      <input
+                        type="radio"
+                        name="cpu"
+                        value={cpu.id}
                         checked={selectedCpuId === cpu.id}
                         onChange={() => setSelectedCpuId(cpu.id)}
                         className="mr-2 accent-orange-500"
                       />
                       <div>
-                        <div className="font-bold text-xs text-white">{cpu.name}</div>
-                        <div className="text-[10px] text-slate-400">{cpu.desc}</div>
+                        <div className={`font-bold text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>{cpu.name}</div>
+                        <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>{cpu.desc}</div>
                       </div>
                     </div>
                     <div className="text-right text-xs">
-                      <div className="font-mono font-bold text-slate-200">{cpu.baseFreq} GHz</div>
-                      <div className="text-slate-400">{cpu.cores} Cores</div>
+                      <div className={`font-mono font-bold ${isDark ? 'text-slate-200' : 'text-gray-700'}`}>{cpu.baseFreq} GHz</div>
+                      <div className={isDark ? 'text-slate-400' : 'text-gray-600'}>{cpu.cores} Cores</div>
                     </div>
                   </label>
                 ))}
@@ -514,29 +524,29 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
             </div>
 
             {/* Inputs Panel */}
-            <div className="bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-800">
+            <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-4 rounded-xl shadow-sm border`}>
                {configMode === 'manual' ? (
                  <>
-                    <h2 className="font-bold text-white mb-4 text-sm flex items-center">
-                      <span className="mr-2 text-slate-400"><Icons.Sliders /></span> Parameters
+                    <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-4 text-sm flex items-center`}>
+                      <span className={`mr-2 ${isDark ? 'text-slate-400' : 'text-gray-600'}`}><Icons.Sliders /></span> Parameters
                     </h2>
                     <div className="space-y-5">
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                          <div className={`flex justify-between text-xs font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase mb-1`}>
                             <span>Total Users</span>
                             <span className="text-orange-500 text-sm">{numUsers}</span>
                           </div>
                           <input type="range" min="50" max="5000" step="50" value={numUsers} onChange={(e) => setNumUsers(Number(e.target.value))} className="w-full accent-orange-500" />
                         </div>
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                          <div className={`flex justify-between text-xs font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase mb-1`}>
                             <span>vCPU Per User</span>
                             <span className="text-orange-500 text-sm">{vcpuPerUser} vCPU</span>
                           </div>
                           <input type="range" min="2" max="16" step="1" value={vcpuPerUser} onChange={(e) => setVcpuPerUser(Number(e.target.value))} className="w-full accent-orange-500" />
                         </div>
                         <div>
-                          <div className="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                          <div className={`flex justify-between text-xs font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase mb-1`}>
                             <span>RAM Per User</span>
                             <span className="text-orange-500 text-sm">{ramPerUser} GB</span>
                           </div>
@@ -544,15 +554,15 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                         </div>
 
                         <div>
-                            <div className="flex justify-between text-xs font-bold text-slate-400 uppercase mb-1">
+                            <div className={`flex justify-between text-xs font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase mb-1`}>
                             <span>CPU Ratio</span>
                             <span className="text-orange-500 text-sm">{oversubscription}:1</span>
                             </div>
                             <input type="range" min="3" max="10" step="0.5" value={oversubscription} onChange={(e) => setOversubscription(Number(e.target.value))} className="w-full accent-orange-500" />
                         </div>
-                        
+
                         {isVsanEnabled && (
-                            <div className="p-3 bg-orange-500/100/10 border border-orange-500/20 rounded-lg">
+                            <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
                                 <div className="flex justify-between text-xs font-bold text-orange-500 uppercase mb-1">
                                     <span>Storage Per User</span>
                                     <span className="text-sm">{storagePerUser} GB</span>
@@ -564,47 +574,47 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                  </>
                ) : (
                  <>
-                    <h2 className="font-bold text-white mb-4 text-sm flex items-center">
+                    <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-4 text-sm flex items-center`}>
                       <span className="mr-2 text-orange-500"><Icons.Import /></span> Workload Details
                     </h2>
                     <div className="space-y-4">
-                      
+
                       {/* Cluster Specs */}
-                      <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 border-b pb-1">Current Cluster Specs</div>
+                      <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-300'} p-2 rounded border`}>
+                        <div className={`text-[10px] font-bold ${isDark ? 'text-slate-400 border-slate-700' : 'text-gray-600 border-gray-300'} uppercase mb-2 border-b pb-1`}>Current Cluster Specs</div>
                         <div className="grid grid-cols-2 gap-3 mb-2">
                            <div>
-                              <label className="text-[10px] text-slate-400 block mb-1">Total Net GHz</label>
-                              <input type="number" value={importData.totalNetGhz} onChange={(e) => setImportData({...importData, totalNetGhz: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                              <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total Net GHz</label>
+                              <input type="number" value={importData.totalNetGhz} onChange={(e) => setImportData({...importData, totalNetGhz: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                            </div>
                            <div>
-                              <label className="text-[10px] text-slate-400 block mb-1">Total Memory (GB)</label>
-                              <input type="number" value={importData.totalMemoryGB} onChange={(e) => setImportData({...importData, totalMemoryGB: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                              <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total Memory (GB)</label>
+                              <input type="number" value={importData.totalMemoryGB} onChange={(e) => setImportData({...importData, totalMemoryGB: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                            <div>
-                              <label className="text-[10px] text-slate-400 block mb-1">Total Cores</label>
-                              <input type="number" value={importData.totalCores} onChange={(e) => setImportData({...importData, totalCores: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                              <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total Cores</label>
+                              <input type="number" value={importData.totalCores} onChange={(e) => setImportData({...importData, totalCores: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                            </div>
                            <div>
-                              <label className="text-[10px] text-slate-400 block mb-1">Total Servers</label>
-                              <input type="number" value={importData.totalServers} onChange={(e) => setImportData({...importData, totalServers: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                              <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total Servers</label>
+                              <input type="number" value={importData.totalServers} onChange={(e) => setImportData({...importData, totalServers: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                            </div>
                         </div>
                       </div>
 
                       {/* VM Specs */}
-                      <div className="bg-slate-900 p-2 rounded border border-slate-800">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 border-b pb-1">Current VM Allocation</div>
+                      <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-300'} p-2 rounded border`}>
+                        <div className={`text-[10px] font-bold ${isDark ? 'text-slate-400 border-slate-700' : 'text-gray-600 border-gray-300'} uppercase mb-2 border-b pb-1`}>Current VM Allocation</div>
                         <div className="grid grid-cols-2 gap-3">
                            <div>
-                              <label className="text-[10px] text-slate-400 block mb-1">Total VMs (Users)</label>
-                              <input type="number" value={importData.totalVMs} onChange={(e) => setImportData({...importData, totalVMs: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                              <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total VMs (Users)</label>
+                              <input type="number" value={importData.totalVMs} onChange={(e) => setImportData({...importData, totalVMs: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                            </div>
                            <div>
-                              <label className="text-[10px] text-slate-400 block mb-1">Total vCPUs</label>
-                              <input type="number" value={importData.totalvCPUs} onChange={(e) => setImportData({...importData, totalvCPUs: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                              <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total vCPUs</label>
+                              <input type="number" value={importData.totalvCPUs} onChange={(e) => setImportData({...importData, totalvCPUs: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                            </div>
                         </div>
                       </div>
@@ -615,35 +625,35 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                              <div className="text-[10px] font-bold text-orange-400 uppercase mb-2 border-b border-orange-500/30 pb-1">Storage Profiler</div>
                              <div className="grid grid-cols-3 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-slate-400 block mb-1">Total IOPS</label>
-                                    <input type="number" value={importData.totalIops} onChange={(e) => setImportData({...importData, totalIops: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                                    <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Total IOPS</label>
+                                    <input type="number" value={importData.totalIops} onChange={(e) => setImportData({...importData, totalIops: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-slate-400 block mb-1">Raw TB</label>
-                                    <input type="number" value={importData.totalRawTb} onChange={(e) => setImportData({...importData, totalRawTb: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                                    <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Raw TB</label>
+                                    <input type="number" value={importData.totalRawTb} onChange={(e) => setImportData({...importData, totalRawTb: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-slate-400 block mb-1">Used TB</label>
-                                    <input type="number" value={importData.totalUsedTb} onChange={(e) => setImportData({...importData, totalUsedTb: Number(e.target.value)})} className="w-full text-xs p-1 border rounded" />
+                                    <label className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} block mb-1`}>Used TB</label>
+                                    <input type="number" value={importData.totalUsedTb} onChange={(e) => setImportData({...importData, totalUsedTb: Number(e.target.value)})} className={`w-full text-xs p-1 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                                 </div>
                              </div>
                         </div>
                       )}
 
                       {/* Utilization */}
-                      <div className="bg-orange-500/100/10 p-2 rounded border border-orange-500/20">
+                      <div className="bg-orange-500/10 p-2 rounded border border-orange-500/20">
                         <div className="text-[10px] font-bold text-orange-400 uppercase mb-2 border-b border-orange-500/30 pb-1">Observed Utilization</div>
                         <div className="mb-2">
-                           <div className="flex justify-between text-xs text-slate-300 mb-1">
+                           <div className={`flex justify-between text-xs ${isDark ? 'text-slate-300' : 'text-gray-700'} mb-1`}>
                              <span>CPU Util: <strong>{importData.avgCpuUtil}%</strong></span>
                            </div>
-                           <input type="range" value={importData.avgCpuUtil} onChange={(e) => setImportData({...importData, avgCpuUtil: Number(e.target.value)})} className="w-full h-1.5 bg-orange-500/100/20 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                           <input type="range" value={importData.avgCpuUtil} onChange={(e) => setImportData({...importData, avgCpuUtil: Number(e.target.value)})} className="w-full h-1.5 bg-orange-500/20 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                         </div>
                         <div>
-                           <div className="flex justify-between text-xs text-slate-300 mb-1">
+                           <div className={`flex justify-between text-xs ${isDark ? 'text-slate-300' : 'text-gray-700'} mb-1`}>
                              <span>RAM Util: <strong>{importData.avgRamUtil}%</strong></span>
                            </div>
-                           <input type="range" value={importData.avgRamUtil} onChange={(e) => setImportData({...importData, avgRamUtil: Number(e.target.value)})} className="w-full h-1.5 bg-orange-500/100/20 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                           <input type="range" value={importData.avgRamUtil} onChange={(e) => setImportData({...importData, avgRamUtil: Number(e.target.value)})} className="w-full h-1.5 bg-orange-500/20 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                         </div>
                       </div>
 
@@ -662,42 +672,42 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
             </div>
             
             {/* vSAN Config Panel */}
-            <div className="bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-800">
+            <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-4 rounded-xl shadow-sm border`}>
                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-bold text-white text-sm flex items-center">
+                    <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} text-sm flex items-center`}>
                         <span className="mr-2 text-orange-500"><Icons.Database /></span> vSAN ESA (Express Storage Architecture)
                     </h2>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={isVsanEnabled} onChange={() => setIsVsanEnabled(!isVsanEnabled)} className="sr-only peer" />
-                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-900 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500/100"></div>
+                        <div className={`w-9 h-5 ${isDark ? 'bg-slate-700' : 'bg-gray-300'} peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] ${isDark ? 'after:bg-slate-900' : 'after:bg-white'} after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500`}></div>
                     </label>
                  </div>
-                 
+
                  {isVsanEnabled ? (
                     <div className="space-y-3 animate-fadeIn">
-                        
+
                         {/* Disk Config Mode Toggle */}
-                        <div className="flex bg-slate-800 p-1 rounded-lg mb-4 w-full">
+                        <div className={`flex ${isDark ? 'bg-slate-800' : 'bg-gray-100'} p-1 rounded-lg mb-4 w-full`}>
                             <button
                                 onClick={() => setDiskConfigMode('auto')}
-                                className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${diskConfigMode === 'auto' ? 'bg-slate-900 text-orange-500 shadow-sm' : 'text-slate-400'}`}
+                                className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${diskConfigMode === 'auto' ? `${isDark ? 'bg-slate-900' : 'bg-white'} text-orange-500 shadow-sm` : `${isDark ? 'text-slate-400' : 'text-gray-600'}`}`}
                             >
                                 Auto-Size
                             </button>
                             <button
                                 onClick={() => setDiskConfigMode('manual')}
-                                className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${diskConfigMode === 'manual' ? 'bg-slate-900 text-orange-500 shadow-sm' : 'text-slate-400'}`}
+                                className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${diskConfigMode === 'manual' ? `${isDark ? 'bg-slate-900' : 'bg-white'} text-orange-500 shadow-sm` : `${isDark ? 'text-slate-400' : 'text-gray-600'}`}`}
                             >
                                 Manual Count
                             </button>
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Disk Model (NVMe)</label>
-                            <select 
-                                value={selectedDisk.id} 
+                            <label className={`text-[10px] font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase block mb-1`}>Disk Model (NVMe)</label>
+                            <select
+                                value={selectedDisk.id}
                                 onChange={(e) => setSelectedDisk(DISK_OPTIONS.find(d => d.id === e.target.value))}
-                                className="w-full text-xs p-2 border rounded bg-slate-900"
+                                className={`w-full text-xs p-2 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
                             >
                                 {DISK_OPTIONS.map(d => (
                                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -707,54 +717,54 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
 
                         {diskConfigMode === 'manual' && (
                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                                <label className={`text-[10px] font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase block mb-1`}>
                                     Disks Per Node: <span className="text-orange-500">{manualDiskCount}</span>
                                 </label>
-                                <input 
-                                    type="range" 
-                                    min="2" 
-                                    max="6" 
-                                    step="1" 
-                                    value={manualDiskCount} 
-                                    onChange={(e) => setManualDiskCount(Number(e.target.value))} 
+                                <input
+                                    type="range"
+                                    min="2"
+                                    max="6"
+                                    step="1"
+                                    value={manualDiskCount}
+                                    onChange={(e) => setManualDiskCount(Number(e.target.value))}
                                     className="w-full accent-orange-500"
                                 />
-                                <div className="text-[10px] text-slate-400 mt-1">
+                                <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} mt-1`}>
                                     Manual overrides may increase node count if storage is insufficient.
                                 </div>
                             </div>
                         )}
 
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Redundancy Policy</label>
-                            <select 
-                                value={raidPolicy.id} 
+                            <label className={`text-[10px] font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase block mb-1`}>Redundancy Policy</label>
+                            <select
+                                value={raidPolicy.id}
                                 onChange={(e) => setRaidPolicy(RAID_OPTIONS.find(r => r.id === e.target.value))}
-                                className="w-full text-xs p-2 border rounded bg-slate-900"
+                                className={`w-full text-xs p-2 border rounded ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
                             >
                                 {RAID_OPTIONS.map(r => (
                                     <option key={r.id} value={r.id}>{r.name} - {r.desc}</option>
                                 ))}
                             </select>
-                            <div className="text-[10px] text-slate-400 mt-1">
+                            <div className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'} mt-1`}>
                                 Storage Overhead: <span className="font-bold text-orange-500">{(raidPolicy.overhead).toFixed(2)}x</span>
                             </div>
                         </div>
                     </div>
                  ) : (
-                    <div className="text-xs text-slate-400 italic">Enable to configure vSAN ESA Storage.</div>
+                    <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-600'} italic`}>Enable to configure vSAN ESA Storage.</div>
                  )}
             </div>
 
             {/* Manual Host Count Panel */}
-            <div className="bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-800">
+            <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-4 rounded-xl shadow-sm border`}>
                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-bold text-white text-sm flex items-center">
+                    <h2 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} text-sm flex items-center`}>
                         <span className="mr-2 text-orange-500">{isHwLocked ? <Icons.Lock /> : <Icons.Unlock />}</span> Manual Host Count
                     </h2>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" checked={isHwLocked} onChange={() => setIsHwLocked(!isHwLocked)} className="sr-only peer" />
-                        <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-900 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                        <div className={`w-9 h-5 ${isDark ? 'bg-slate-700' : 'bg-gray-300'} peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] ${isDark ? 'after:bg-slate-900' : 'after:bg-white'} after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500`}></div>
                     </label>
                  </div>
 
@@ -766,14 +776,14 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setLockedBladeCount(Math.max(2, lockedBladeCount - 1))}
-                                        className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-orange-500 rounded font-bold transition-colors"
+                                        className={`w-7 h-7 ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-200 hover:bg-gray-300'} text-orange-500 rounded font-bold transition-colors`}
                                     >
                                         −
                                     </button>
                                     <span className="text-2xl font-bold text-orange-500 min-w-[3rem] text-center">{lockedBladeCount}</span>
                                     <button
                                         onClick={() => setLockedBladeCount(Math.min(50, lockedBladeCount + 1))}
-                                        className="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-orange-500 rounded font-bold transition-colors"
+                                        className={`w-7 h-7 ${isDark ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-200 hover:bg-gray-300'} text-orange-500 rounded font-bold transition-colors`}
                                     >
                                         +
                                     </button>
@@ -793,17 +803,17 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                             </div>
                         </div>
 
-                        <div className="text-xs text-slate-400 bg-slate-800 p-3 rounded border border-slate-700">
+                        <div className={`text-xs ${isDark ? 'text-slate-400 bg-slate-800 border-slate-700' : 'text-gray-600 bg-gray-100 border-gray-300'} p-3 rounded border`}>
                             <div className="flex items-start gap-2">
                                 <Icons.Info />
                                 <div>
-                                    <strong className="text-slate-300">Fixed Hardware Mode:</strong> Calculations will show utilization based on the specified host count. Warnings will appear if capacity is insufficient.
+                                    <strong className={isDark ? 'text-slate-300' : 'text-gray-700'}>Fixed Hardware Mode:</strong> Calculations will show utilization based on the specified host count. Warnings will appear if capacity is insufficient.
                                 </div>
                             </div>
                         </div>
                     </div>
                  ) : (
-                    <div className="text-xs text-slate-400 italic">Enable to manually specify the number of hosts instead of auto-calculating.</div>
+                    <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-600'} italic`}>Enable to manually specify the number of hosts instead of auto-calculating.</div>
                  )}
             </div>
 
@@ -813,23 +823,23 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
           <div className="lg:col-span-5 space-y-6">
              {/* Big Numbers */}
              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 p-4 rounded-xl text-white shadow relative overflow-hidden">
-                   <div className="text-slate-400 text-xs mb-1 uppercase tracking-wider">Total Blades Needed</div>
+                <div className={`${isDark ? 'bg-slate-800 text-white' : 'bg-white text-gray-900 border border-gray-200'} p-4 rounded-xl shadow relative overflow-hidden`}>
+                   <div className={`${isDark ? 'text-slate-400' : 'text-gray-600'} text-xs mb-1 uppercase tracking-wider`}>Total Blades Needed</div>
                    <div className="text-4xl font-bold">{result.totalBlades}</div>
                    <div className="text-xs text-emerald-400 mt-1">{result.activeBlades} Active + 1 Standby</div>
                 </div>
-                <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-sm">
-                   <div className="text-slate-400 text-xs mb-1 uppercase tracking-wider">Total Chassis</div>
+                <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-4 rounded-xl border shadow-sm`}>
+                   <div className={`${isDark ? 'text-slate-400' : 'text-gray-600'} text-xs mb-1 uppercase tracking-wider`}>Total Chassis</div>
                    <div className="text-4xl font-bold text-orange-500">{result.chassisCount}</div>
-                   <div className="text-xs text-slate-400 mt-1">UCS X9508 (7RU)</div>
+                   <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-600'} mt-1`}>UCS X9508 (7RU)</div>
                 </div>
              </div>
 
              {/* Performance Panel */}
-             <div className="bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-800">
-                <div className="flex items-center mb-6 border-b pb-2">
+             <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-5 rounded-xl shadow-sm border`}>
+                <div className={`flex items-center mb-6 border-b ${isDark ? 'border-slate-800' : 'border-gray-200'} pb-2`}>
                    <span className="text-orange-500 mr-2"><Icons.Activity /></span>
-                   <h3 className="font-bold text-white text-sm">Projected Cluster Health</h3>
+                   <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} text-sm`}>Projected Cluster Health</h3>
                 </div>
 
                 <ProgressBar 
@@ -846,22 +856,22 @@ const VdiArchitectCalculator = ({ project, onSave, onBack }) => {
                 />
 
                 {isVsanEnabled && (
-                    <div className="mt-4 pt-4 border-t border-slate-700">
+                    <div className={`mt-4 pt-4 border-t ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
                          <div className="flex justify-between items-end mb-2">
-                             <div className="text-sm font-bold text-slate-200">vSAN Capacity Usage</div>
-                             <div className="text-xs text-slate-400">{(result.storage.usableNeeded || 0).toFixed(1)} TB Usable</div>
+                             <div className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-gray-700'}`}>vSAN Capacity Usage</div>
+                             <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>{(result.storage.usableNeeded || 0).toFixed(1)} TB Usable</div>
                          </div>
-                         <div className="w-full bg-slate-700 rounded-full h-3">
-                              <div className="h-3 rounded-full bg-orange-500/100/100" style={{ width: result.storage.isOversized ? '20%' : '70%' }}></div> 
+                         <div className={`w-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded-full h-3`}>
+                              <div className="h-3 rounded-full bg-orange-500" style={{ width: result.storage.isOversized ? '20%' : '70%' }}></div>
                          </div>
-                         <div className="flex justify-between mt-1 text-[10px] text-slate-400">
+                         <div className={`flex justify-between mt-1 text-[10px] ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
                             <span>Policy: {raidPolicy.name}</span>
                             <span>Slack Space: 25%</span>
                          </div>
                     </div>
                 )}
 
-                <div className="mt-4 text-xs text-slate-400 bg-slate-900 p-3 rounded border border-slate-700 flex justify-between">
+                <div className={`mt-4 text-xs ${isDark ? 'text-slate-400 bg-slate-900 border-slate-700' : 'text-gray-600 bg-gray-100 border-gray-300'} p-3 rounded border flex justify-between`}>
                    <span><strong>{result.cpu.name}</strong> ({result.cpu.cores}C / {result.cpu.baseFreq}GHz)</span>
                    <span className="font-mono font-bold text-orange-500">{result.netGhzPerBlade.toFixed(0)} Net GHz</span>
                 </div>
