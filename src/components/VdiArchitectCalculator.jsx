@@ -58,42 +58,49 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
   
   // vSAN / Disk State
   const [selectedDisk, setSelectedDisk] = useState(DISK_OPTIONS[1]); // Default 3.8TB
-  const [raidPolicy, setRaidPolicy] = useState(RAID_OPTIONS[1]); 
+  const [raidPolicy, setRaidPolicy] = useState(RAID_OPTIONS[1]);
   const [diskConfigMode, setDiskConfigMode] = useState('auto'); // 'auto' | 'manual'
   const [manualDiskCount, setManualDiskCount] = useState(2); // Default to minimum ESA recommendation
+  const [slackSpace, setSlackSpace] = useState(25); // vSAN slack space 10-25%, default 25%
 
   const [importData, setImportData] = useState({
-    totalServers: 12, totalCores: 288, totalNetGhz: 750, totalMemoryGB: 9216, 
-    totalVMs: 2000, totalvCPUs: 6000, avgCpuUtil: 65, avgRamUtil: 80, 
+    totalServers: 12, totalCores: 288, totalNetGhz: 750, totalMemoryGB: 9216,
+    totalVMs: 2000, totalvCPUs: 6000, avgCpuUtil: 65, avgRamUtil: 80,
     totalIops: 80000, totalRawTb: 500, totalUsedTb: 300, growthTarget: 10
   });
 
   const [numUsers, setNumUsers] = useState(450);
   const [vcpuPerUser, setVcpuPerUser] = useState(8);
   const [ramPerUser, setRamPerUser] = useState(16);
-  const [storagePerUser, setStoragePerUser] = useState(60); 
+  const [storagePerUser, setStoragePerUser] = useState(60);
+  const [peakGhzPerUser, setPeakGhzPerUser] = useState(2.5); // Expected peak GHz per user
   const [oversubscription, setOversubscription] = useState(5);
   const [maxRamTarget, setMaxRamTarget] = useState(85);
   const [selectedCpuId, setSelectedCpuId] = useState('amd-9455');
   const [isHwLocked, setIsHwLocked] = useState(false);
   const [lockedBladeCount, setLockedBladeCount] = useState(16);
 
-  const BLADE_RAM_GB = 1536; 
+  const BLADE_RAM_GB = 1536;
   const SOCKETS_PER_BLADE = 2;
   const CHASSIS_SLOTS = 8;
   const MAX_DRIVES_PER_BLADE = 6;
-  const VSAN_SLACK_SPACE = 0.25; 
   const HYPERVISOR_OVERHEAD_BASE = 0.1;
-  const VSAN_CPU_OVERHEAD = 0.12; 
-  const VSAN_RAM_OVERHEAD_GB = 32; 
-  const MIN_DRIVES_PER_BLADE_ESA = 2; // Updated to 2 as per user request
+  const VSAN_CPU_OVERHEAD = 0.12;
+  const VSAN_RAM_OVERHEAD_GB = 32;
+  const MIN_DRIVES_PER_BLADE_ESA = 2;
+
+  // vSAN ESA Storage Overheads (Official Broadcom Documentation)
+  const VSAN_LFS_OVERHEAD = 0.131; // 13.1% LFS overhead
+  const VSAN_METADATA_OVERHEAD = 0.10; // 10% global metadata overhead
 
   const [result, setResult] = useState({
     activeBlades: 0, totalBlades: 0, chassisCount: 0, cpuLoad: 0, ramUtil: 0,
     storageUtil: 0, netGhzPerBlade: 0, usersPerBlade: 0, safetyTriggered: false,
     constraint: 'CPU', math: { netCores: 0, totalSlots: 0, usersPerBladeCpuCap: 0, nPlusOneRatio: 0, totalVcpu: 0 },
     cpu: {}, profiler: null, totalSystemCores: 0, totalSystemRamTB: 0,
-    storage: { rawNeeded: 0, disksPerBlade: 0, totalDisks: 0, usableCapacity: 0, totalRawCapacity: 0, usableNeeded: 0, isOversized: false }
+    storage: { rawNeeded: 0, disksPerBlade: 0, totalDisks: 0, usableCapacity: 0, totalRawCapacity: 0, usableNeeded: 0, isOversized: false, overheadBreakdown: {} },
+    ghz: { totalDemand: 0, totalAvailable: 0, utilization: 0, status: 'optimal', message: '' },
+    storageAlert: { type: '', message: '' }
   });
 
   // --- Load Project Data ---
@@ -112,6 +119,8 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
       if (d.raidPolicy) setRaidPolicy(d.raidPolicy);
       if (d.diskConfigMode) setDiskConfigMode(d.diskConfigMode);
       if (d.manualDiskCount !== undefined) setManualDiskCount(d.manualDiskCount);
+      if (d.slackSpace !== undefined) setSlackSpace(d.slackSpace);
+      if (d.peakGhzPerUser !== undefined) setPeakGhzPerUser(d.peakGhzPerUser);
       if (d.isHwLocked !== undefined) setIsHwLocked(d.isHwLocked);
       if (d.lockedBladeCount !== undefined) setLockedBladeCount(d.lockedBladeCount);
       if (d.importData) setImportData(d.importData);
@@ -126,6 +135,7 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
       vcpuPerUser,
       ramPerUser,
       storagePerUser,
+      peakGhzPerUser,
       oversubscription,
       selectedCpuId,
       isVsanEnabled,
@@ -133,6 +143,7 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
       raidPolicy,
       diskConfigMode,
       manualDiskCount,
+      slackSpace,
       isHwLocked,
       lockedBladeCount,
       importData,
@@ -140,7 +151,7 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
     if (onSave) {
       onSave(saveData);
     }
-  }, [configMode, numUsers, vcpuPerUser, ramPerUser, storagePerUser, oversubscription, selectedCpuId, isVsanEnabled, selectedDisk, raidPolicy, diskConfigMode, manualDiskCount, isHwLocked, lockedBladeCount, importData, onSave]);
+  }, [configMode, numUsers, vcpuPerUser, ramPerUser, storagePerUser, peakGhzPerUser, oversubscription, selectedCpuId, isVsanEnabled, selectedDisk, raidPolicy, diskConfigMode, manualDiskCount, slackSpace, isHwLocked, lockedBladeCount, importData, onSave]);
 
   // --- Workload Profiler Logic ---
   useEffect(() => {
@@ -225,11 +236,21 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
     let minBlades = Math.max(bladesForCpu, bladesForRam);
     if (bladesForRam > bladesForCpu) limitingFactor = 'RAM';
 
-    // 4. vSAN Storage Sizing
+    // 4. vSAN Storage Sizing (with comprehensive overhead calculations)
     if (isVsanEnabled) {
         const totalUsableGB = numUsers * storagePerUser;
         const totalUsableTB = totalUsableGB / 1024;
-        const totalRawTB = totalUsableTB * raidPolicy.overhead * (1 + VSAN_SLACK_SPACE);
+
+        // Comprehensive vSAN ESA overhead calculation per Broadcom documentation:
+        // 1. VM Data
+        const vmData = totalUsableTB;
+        // 2. Apply LFS (Log-Structured Filesystem) Overhead: 13.1%
+        const afterLFS = vmData * (1 + VSAN_LFS_OVERHEAD);
+        // 3. Apply RAID/Erasure Coding Overhead
+        const afterRAID = afterLFS * raidPolicy.overhead;
+        // 4. Account for Slack Space and Metadata (10% + user-defined slack)
+        const slackPercent = slackSpace / 100;
+        const totalRawTB = afterRAID / (1 - slackPercent - VSAN_METADATA_OVERHEAD);
         
         let sufficientStorage = false;
         let bladesForStorage = minBlades;
@@ -272,11 +293,21 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
         storageResults = {
             rawNeeded: totalRawTB,
             usableNeeded: totalUsableTB,
-            disksPerBlade: disksPerNode, 
+            disksPerBlade: disksPerNode,
             usableCapacity: 0,
             totalDisks: 0,
             totalRawCapacity: 0,
-            isOversized: false
+            isOversized: false,
+            overheadBreakdown: {
+                vmData,
+                afterLFS,
+                afterRAID,
+                lfsOverheadTB: afterLFS - vmData,
+                raidOverheadTB: afterRAID - afterLFS,
+                slackAndMetadataTB: totalRawTB - afterRAID,
+                totalOverheadTB: totalRawTB - vmData,
+                efficiencyPercent: (vmData / totalRawTB) * 100
+            }
         };
     }
 
@@ -321,9 +352,61 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
     if (isVsanEnabled) {
         storageResults.totalDisks = totalBlades * storageResults.disksPerBlade;
         storageResults.totalRawCapacity = storageResults.totalDisks * selectedDisk.capacity;
-        
+
         if (storageResults.totalRawCapacity > (storageResults.rawNeeded * 1.5)) {
             storageResults.isOversized = true;
+        }
+    }
+
+    // 7. GHz Demand Validation
+    const totalGhzDemand = numUsers * peakGhzPerUser;
+    const totalGhzAvailable = totalClusterNetGhz;
+    const ghzUtilization = (totalGhzDemand / totalGhzAvailable) * 100;
+
+    let ghzStatus = 'optimal';
+    let ghzMessage = '';
+
+    if (ghzUtilization > 100) {
+        ghzStatus = 'insufficient';
+        const ghzShortfall = totalGhzDemand - totalGhzAvailable;
+        const additionalBlades = Math.ceil(ghzShortfall / netGhzPerBlade);
+        ghzMessage = `⚠️ CRITICAL: GHz demand (${totalGhzDemand.toFixed(0)} GHz) exceeds available capacity (${totalGhzAvailable.toFixed(0)} GHz) by ${ghzShortfall.toFixed(0)} GHz. Add ${additionalBlades} more blade${additionalBlades > 1 ? 's' : ''} or select a higher-frequency CPU.`;
+    } else if (ghzUtilization > 85) {
+        ghzStatus = 'high';
+        ghzMessage = `⚠️ HIGH: GHz utilization at ${ghzUtilization.toFixed(1)}%. Consider adding 1-2 blades for safety margin or select a higher-frequency CPU.`;
+    } else if (ghzUtilization < 40) {
+        ghzStatus = 'oversized';
+        const excessGhz = totalGhzAvailable - totalGhzDemand;
+        const bladesCanRemove = Math.floor(excessGhz / netGhzPerBlade);
+        if (bladesCanRemove > 0 && activeBlades > 3) {
+            ghzMessage = `💡 OVERSIZED: GHz utilization only ${ghzUtilization.toFixed(1)}%. You could reduce by ${bladesCanRemove} blade${bladesCanRemove > 1 ? 's' : ''} or select a lower-frequency CPU to optimize costs.`;
+        } else {
+            ghzMessage = `✓ GHz capacity at ${ghzUtilization.toFixed(1)}% utilization.`;
+        }
+    } else {
+        ghzStatus = 'optimal';
+        ghzMessage = `✓ OPTIMAL: GHz capacity well-balanced at ${ghzUtilization.toFixed(1)}% utilization.`;
+    }
+
+    // 8. Storage Validation Alerts
+    let storageAlertType = '';
+    let storageAlertMessage = '';
+
+    if (isVsanEnabled) {
+        const storageUtilization = (storageResults.rawNeeded / storageResults.totalRawCapacity) * 100;
+
+        if (storageUtilization > 100) {
+            storageAlertType = 'critical';
+            storageAlertMessage = `⚠️ CRITICAL: Raw storage demand (${storageResults.rawNeeded.toFixed(1)} TB) exceeds available capacity (${storageResults.totalRawCapacity.toFixed(1)} TB). Increase disk count or capacity.`;
+        } else if (storageUtilization > 85) {
+            storageAlertType = 'warning';
+            storageAlertMessage = `⚠️ WARNING: Storage utilization at ${storageUtilization.toFixed(1)}%. Consider adding more disks for headroom.`;
+        } else if (storageUtilization < 30 && storageResults.totalRawCapacity > 20) {
+            storageAlertType = 'oversized';
+            storageAlertMessage = `💡 OVERSIZED: Storage utilization only ${storageUtilization.toFixed(1)}%. Consider smaller disk capacity or fewer disks to optimize costs.`;
+        } else {
+            storageAlertType = 'optimal';
+            storageAlertMessage = `✓ Storage capacity well-balanced at ${storageUtilization.toFixed(1)}% utilization.`;
         }
     }
 
@@ -334,23 +417,34 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
       cpuLoad: calculatedCpuLoad,
       ramUtil: calculatedRamUtil,
       constraint: limitingFactor,
-      netGhzPerBlade, 
+      netGhzPerBlade,
       usersPerBlade: usersPerBladeActual,
       cpu,
       profiler: profilerStats,
       totalSystemCores,
       totalSystemRamTB,
       storage: storageResults,
+      ghz: {
+        totalDemand: totalGhzDemand,
+        totalAvailable: totalGhzAvailable,
+        utilization: ghzUtilization,
+        status: ghzStatus,
+        message: ghzMessage
+      },
+      storageAlert: {
+        type: storageAlertType,
+        message: storageAlertMessage
+      },
       math: {
         netCores: netCoresPerBlade,
-        totalSlots: Math.floor(grossCoresPerBlade * oversubscription), 
+        totalSlots: Math.floor(grossCoresPerBlade * oversubscription),
         usersPerBladeCpuCap: Math.floor((grossCoresPerBlade * oversubscription) / vcpuPerUser),
         nPlusOneRatio: nPlusOneRatio,
         totalVcpu: totalVcpuDemand
       }
     });
 
-  }, [numUsers, vcpuPerUser, ramPerUser, oversubscription, maxRamTarget, selectedCpuId, isHwLocked, lockedBladeCount, configMode, importData, isVsanEnabled, selectedDisk, raidPolicy, storagePerUser, diskConfigMode, manualDiskCount]);
+  }, [numUsers, vcpuPerUser, ramPerUser, storagePerUser, peakGhzPerUser, oversubscription, maxRamTarget, selectedCpuId, isHwLocked, lockedBladeCount, configMode, importData, isVsanEnabled, selectedDisk, raidPolicy, diskConfigMode, manualDiskCount, slackSpace]);
 
   // --- Helpers ---
   const ProgressBar = ({ label, value, limit, isCpu, isStorage }) => {
@@ -553,6 +647,17 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
                           <input type="range" min="4" max="64" step="4" value={ramPerUser} onChange={(e) => setRamPerUser(Number(e.target.value))} className="w-full accent-orange-500" />
                         </div>
 
+                        <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                          <div className="flex justify-between text-xs font-bold text-orange-500 uppercase mb-1">
+                            <span>Expected Peak GHz Per User</span>
+                            <span className="text-sm">{peakGhzPerUser.toFixed(1)} GHz</span>
+                          </div>
+                          <input type="range" min="0.5" max="8.0" step="0.1" value={peakGhzPerUser} onChange={(e) => setPeakGhzPerUser(Number(e.target.value))} className="w-full accent-orange-500" />
+                          <div className={`text-[9px] ${isDark ? 'text-slate-400' : 'text-gray-600'} mt-1 italic`}>
+                            Critical for GHz demand validation. Typical: 2-3 GHz for office, 4-6 GHz for CAD/graphics
+                          </div>
+                        </div>
+
                         <div>
                             <div className={`flex justify-between text-xs font-bold ${isDark ? 'text-slate-400' : 'text-gray-600'} uppercase mb-1`}>
                             <span>CPU Ratio</span>
@@ -750,6 +855,34 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
                                 Storage Overhead: <span className="font-bold text-orange-500">{(raidPolicy.overhead).toFixed(2)}x</span>
                             </div>
                         </div>
+
+                        <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                            <label className={`text-[10px] font-bold text-orange-500 uppercase block mb-1`}>
+                                Slack Space: <span className="text-sm">{slackSpace}%</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="10"
+                                max="25"
+                                step="1"
+                                value={slackSpace}
+                                onChange={(e) => setSlackSpace(Number(e.target.value))}
+                                className="w-full accent-orange-500"
+                            />
+                            <div className={`text-[9px] ${isDark ? 'text-slate-400' : 'text-gray-600'} mt-1`}>
+                                Reserved capacity for operations, snapshots, and cluster expansion. VMware recommends 25%
+                            </div>
+                        </div>
+
+                        <div className={`text-[9px] ${isDark ? 'text-slate-400 bg-slate-800/50 border-slate-700' : 'text-gray-600 bg-gray-100 border-gray-300'} p-2 rounded border`}>
+                            <strong>vSAN ESA Overheads Applied:</strong>
+                            <ul className="mt-1 space-y-0.5 ml-3 list-disc">
+                                <li>LFS (Log-Structured FS): 13.1%</li>
+                                <li>RAID/Erasure Coding: {((raidPolicy.overhead - 1) * 100).toFixed(0)}%</li>
+                                <li>Slack Space: {slackSpace}%</li>
+                                <li>Global Metadata: 10%</li>
+                            </ul>
+                        </div>
                     </div>
                  ) : (
                     <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-600'} italic`}>Enable to configure vSAN ESA Storage.</div>
@@ -910,11 +1043,54 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
                        </div>
                   </div>
                 )}
+
+                {/* GHz Validation Alert */}
+                <div className={`mt-4 p-3 border rounded text-xs flex items-start ${
+                  result.ghz.status === 'insufficient'
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                    : result.ghz.status === 'high'
+                    ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                    : result.ghz.status === 'oversized'
+                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                    : 'bg-green-500/10 border-green-500/30 text-green-400'
+                }`}>
+                     <span className="mr-2 mt-0.5"><Icons.Activity /></span>
+                     <div>
+                        <strong>GHz Capacity Analysis</strong>
+                        <div className="mt-1">
+                            {result.ghz.message}
+                        </div>
+                        <div className={`text-[10px] mt-2 ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
+                            Total Demand: {result.ghz.totalDemand.toFixed(0)} GHz | Available: {result.ghz.totalAvailable.toFixed(0)} GHz | Utilization: {result.ghz.utilization.toFixed(1)}%
+                        </div>
+                     </div>
+                </div>
+
+                {/* Storage Validation Alert */}
+                {isVsanEnabled && result.storageAlert.message && (
+                  <div className={`mt-4 p-3 border rounded text-xs flex items-start ${
+                    result.storageAlert.type === 'critical'
+                      ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                      : result.storageAlert.type === 'warning'
+                      ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                      : result.storageAlert.type === 'oversized'
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                      : 'bg-green-500/10 border-green-500/30 text-green-400'
+                  }`}>
+                       <span className="mr-2 mt-0.5"><Icons.Database /></span>
+                       <div>
+                          <strong>Storage Capacity Analysis</strong>
+                          <div className="mt-1">
+                              {result.storageAlert.message}
+                          </div>
+                       </div>
+                  </div>
+                )}
              </div>
 
              {/* Rack View */}
-             <div className="bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-800">
-                <h3 className="font-bold text-white text-sm mb-4">Rack Visualization</h3>
+             <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-5 rounded-xl shadow-sm border`}>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} text-sm mb-4`}>Rack Visualization</h3>
                 <ChassisVisual />
              </div>
           </div>
@@ -922,7 +1098,7 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
           {/* RIGHT: Math Inspector & BOM */}
           <div className="lg:col-span-3 space-y-6">
              {/* Math Inspector */}
-             <div className="bg-slate-900 p-5 rounded-xl shadow-sm text-white border border-slate-700">
+             <div className={`${isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-900'} p-5 rounded-xl shadow-sm border`}>
                 <h3 className="font-bold text-emerald-400 mb-3 text-xs uppercase tracking-wide">
                   {configMode === 'manual' ? 'Math Inspector' : 'Workload Analysis'}
                 </h3>
@@ -945,23 +1121,54 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
                           <span>Target Density:</span>
                           <span className="font-bold">{result.usersPerBlade} Users/Node</span>
                       </div>
-                      {isVsanEnabled && (
+                      {isVsanEnabled && result.storage.overheadBreakdown && (
                            <div className="pt-2 border-t border-slate-700 mt-2 text-indigo-300">
-                                <div className="text-[10px] uppercase mb-1 flex items-center">
-                                    Storage Constraint Check 
+                                <div className="text-[10px] uppercase mb-2 flex items-center text-orange-400">
+                                    vSAN ESA Storage Overheads
                                     {result.storage.isOversized && <span className="ml-1 text-yellow-400"><Icons.Info /></span>}
                                 </div>
-                                <div className="flex justify-between text-slate-400">
-                                    <span>Usable Need:</span>
-                                    <span>{(result.storage.usableNeeded || 0).toFixed(1)} TB</span>
+
+                                <div className="space-y-1 text-[10px]">
+                                    <div className="flex justify-between text-emerald-400 font-bold">
+                                        <span>1. VM Data (Usable):</span>
+                                        <span>{(result.storage.overheadBreakdown.vmData || 0).toFixed(2)} TB</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-slate-400">
+                                        <span className="ml-2">+ LFS Overhead (13.1%):</span>
+                                        <span>+{(result.storage.overheadBreakdown.lfsOverheadTB || 0).toFixed(2)} TB</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-400 border-b border-slate-700/50 pb-1">
+                                        <span className="ml-4">= After LFS:</span>
+                                        <span>{(result.storage.overheadBreakdown.afterLFS || 0).toFixed(2)} TB</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-slate-400 pt-1">
+                                        <span className="ml-2">+ RAID Overhead ({((raidPolicy.overhead - 1) * 100).toFixed(0)}%):</span>
+                                        <span>+{(result.storage.overheadBreakdown.raidOverheadTB || 0).toFixed(2)} TB</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-400 border-b border-slate-700/50 pb-1">
+                                        <span className="ml-4">= After RAID:</span>
+                                        <span>{(result.storage.overheadBreakdown.afterRAID || 0).toFixed(2)} TB</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-slate-400 pt-1">
+                                        <span className="ml-2">+ Slack ({slackSpace}%) + Metadata (10%):</span>
+                                        <span>+{(result.storage.overheadBreakdown.slackAndMetadataTB || 0).toFixed(2)} TB</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold text-white border-t border-slate-600 pt-1 mt-1">
+                                        <span>= Total Raw Required:</span>
+                                        <span>{(result.storage.rawNeeded || 0).toFixed(2)} TB</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-yellow-400 text-[9px] mt-2 pt-2 border-t border-slate-700">
+                                        <span>Storage Efficiency:</span>
+                                        <span className="font-bold">{(result.storage.overheadBreakdown.efficiencyPercent || 0).toFixed(1)}%</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between font-bold text-white border-b border-slate-600 pb-1 mb-1">
-                                    <span>Required Raw:</span>
-                                    <span>{(result.storage.rawNeeded || 0).toFixed(1)} TB</span>
-                                </div>
-                                
+
                                 {result.storage.isOversized && (
-                                    <div className="bg-yellow-900/40 p-2 rounded text-[10px] text-yellow-200 mt-1">
+                                    <div className="bg-yellow-900/40 p-2 rounded text-[10px] text-yellow-200 mt-2">
                                         <strong>Architecture Minimum:</strong> <br/>
                                         Capacity driven by ESA requirement of {result.storage.disksPerBlade} disks per host.
                                     </div>
@@ -1013,8 +1220,8 @@ const VdiArchitectCalculator = ({ project, onSave, onBack, theme, onToggleTheme 
              </div>
 
              {/* BOM */}
-             <div className="bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-800">
-                <h3 className="font-bold text-white mb-4 flex items-center text-sm">
+             <div className={`${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} p-5 rounded-xl shadow-sm border`}>
+                <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-4 flex items-center text-sm`}>
                    <span className="mr-2 text-orange-500"><Icons.Box /></span> Bill of Materials
                 </h3>
                 
