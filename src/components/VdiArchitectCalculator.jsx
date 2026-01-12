@@ -70,7 +70,8 @@ const VdiArchitectCalculator = () => {
   const [numUsers, setNumUsers] = useState(450);
   const [vcpuPerUser, setVcpuPerUser] = useState(8);
   const [ramPerUser, setRamPerUser] = useState(16);
-  const [storagePerUser, setStoragePerUser] = useState(60); 
+  const [storagePerUser, setStoragePerUser] = useState(60);
+  const [peakGhzPerVm, setPeakGhzPerVm] = useState(1.5);
   const [oversubscription, setOversubscription] = useState(5);
   const [maxRamTarget, setMaxRamTarget] = useState(85);
   const [selectedCpuId, setSelectedCpuId] = useState('amd-9455');
@@ -90,9 +91,10 @@ const VdiArchitectCalculator = () => {
   const [result, setResult] = useState({
     activeBlades: 0, totalBlades: 0, chassisCount: 0, cpuLoad: 0, ramUtil: 0,
     storageUtil: 0, netGhzPerBlade: 0, usersPerBlade: 0, safetyTriggered: false,
-    constraint: 'CPU', math: { netCores: 0, totalSlots: 0, usersPerBladeCpuCap: 0, nPlusOneRatio: 0, totalVcpu: 0 }, 
+    constraint: 'CPU', math: { netCores: 0, totalSlots: 0, usersPerBladeCpuCap: 0, nPlusOneRatio: 0, totalVcpu: 0 },
     cpu: {}, profiler: null, totalSystemCores: 0, totalSystemRamTB: 0,
-    storage: { rawNeeded: 0, disksPerBlade: 0, totalDisks: 0, usableCapacity: 0, totalRawCapacity: 0, usableNeeded: 0, isOversized: false }
+    storage: { rawNeeded: 0, disksPerBlade: 0, totalDisks: 0, usableCapacity: 0, totalRawCapacity: 0, usableNeeded: 0, isOversized: false },
+    ghz: { totalDemand: 0, availableGhz: 0, shortfall: 0, hasWarning: false, recommendation: '', utilizationPct: 0 }
   });
 
   // --- Workload Profiler Logic ---
@@ -140,8 +142,10 @@ const VdiArchitectCalculator = () => {
     // 3. Demand Calculation
     let bladesForCpu = 0;
     let bladesForRam = 0;
+    let bladesForGhz = 0;
     let nPlusOneRatio = 0;
     let totalVcpuDemand = 0;
+    let totalGhzDemand = 0;
 
     // --- RAM Demand (Universal) ---
     const totalRamDemandGB = numUsers * ramPerUser;
@@ -173,10 +177,16 @@ const VdiArchitectCalculator = () => {
       const slotsPerBladePhysical = grossCoresPerBlade * oversubscription;
       const requiredActiveNodes = Math.ceil(totalVcpuDemand / slotsPerBladePhysical);
       bladesForCpu = requiredActiveNodes;
+
+      // --- GHz DEMAND CALCULATION ---
+      totalGhzDemand = numUsers * peakGhzPerVm;
+      const SAFE_GHZ_CEILING = 0.85; // 85% safe ceiling for GHz
+      bladesForGhz = Math.ceil(totalGhzDemand / (netGhzPerBlade * SAFE_GHZ_CEILING));
     }
 
-    let minBlades = Math.max(bladesForCpu, bladesForRam);
-    if (bladesForRam > bladesForCpu) limitingFactor = 'RAM';
+    let minBlades = Math.max(bladesForCpu, bladesForRam, bladesForGhz);
+    if (bladesForRam > bladesForCpu && bladesForRam >= bladesForGhz) limitingFactor = 'RAM';
+    if (bladesForGhz > bladesForCpu && bladesForGhz > bladesForRam) limitingFactor = 'GHZ';
 
     // 4. vSAN Storage Sizing
     if (isVsanEnabled) {
@@ -266,10 +276,36 @@ const VdiArchitectCalculator = () => {
 
     const totalBlades = isHwLocked ? lockedBladeCount : activeBlades + 1;
     const chassisCount = Math.ceil(totalBlades / CHASSIS_SLOTS);
-    const usersPerBladeActual = Math.floor(numUsers / activeBlades); 
-    
-    const totalSystemCores = totalBlades * grossCoresPerBlade; 
+    const usersPerBladeActual = Math.floor(numUsers / activeBlades);
+
+    const totalSystemCores = totalBlades * grossCoresPerBlade;
     const totalSystemRamTB = (totalBlades * BLADE_RAM_GB) / 1024;
+
+    // --- GHZ ANALYSIS & WARNINGS ---
+    const availableGhz = activeBlades * netGhzPerBlade;
+    let ghzUtilizationPct = 0;
+    let ghzShortfall = 0;
+    let ghzHasWarning = false;
+    let ghzRecommendation = '';
+
+    if (configMode === 'manual') {
+      ghzUtilizationPct = (totalGhzDemand / availableGhz) * 100;
+      ghzShortfall = Math.max(0, totalGhzDemand - availableGhz);
+
+      if (ghzUtilizationPct > 100) {
+        ghzHasWarning = true;
+        const additionalBladesNeeded = Math.ceil(ghzShortfall / netGhzPerBlade);
+        ghzRecommendation = `CRITICAL: GHz demand (${totalGhzDemand.toFixed(0)} GHz) exceeds available capacity (${availableGhz.toFixed(0)} GHz) by ${ghzShortfall.toFixed(0)} GHz. Add ${additionalBladesNeeded} more blade(s) or reduce peak GHz per VM to ${(availableGhz / numUsers).toFixed(2)} GHz.`;
+      } else if (ghzUtilizationPct > 90) {
+        ghzHasWarning = true;
+        ghzRecommendation = `WARNING: GHz utilization is at ${ghzUtilizationPct.toFixed(1)}%, which is very high. Consider adding 1-2 more blades for better headroom or reducing peak GHz per VM to ${(availableGhz * 0.85 / numUsers).toFixed(2)} GHz for safer operation.`;
+      } else if (ghzUtilizationPct > 75) {
+        ghzHasWarning = true;
+        ghzRecommendation = `CAUTION: GHz utilization is at ${ghzUtilizationPct.toFixed(1)}%. You have adequate capacity but limited headroom. Consider monitoring workload peaks carefully.`;
+      } else {
+        ghzRecommendation = `Excellent GHz headroom at ${ghzUtilizationPct.toFixed(1)}% utilization. Your configuration can handle peak demand with ${(100 - ghzUtilizationPct).toFixed(1)}% spare capacity.`;
+      }
+    }
 
     if (isVsanEnabled) {
         storageResults.totalDisks = totalBlades * storageResults.disksPerBlade;
@@ -287,7 +323,7 @@ const VdiArchitectCalculator = () => {
       cpuLoad: calculatedCpuLoad,
       ramUtil: calculatedRamUtil,
       constraint: limitingFactor,
-      netGhzPerBlade, 
+      netGhzPerBlade,
       usersPerBlade: usersPerBladeActual,
       cpu,
       profiler: profilerStats,
@@ -296,14 +332,22 @@ const VdiArchitectCalculator = () => {
       storage: storageResults,
       math: {
         netCores: netCoresPerBlade,
-        totalSlots: Math.floor(grossCoresPerBlade * oversubscription), 
+        totalSlots: Math.floor(grossCoresPerBlade * oversubscription),
         usersPerBladeCpuCap: Math.floor((grossCoresPerBlade * oversubscription) / vcpuPerUser),
         nPlusOneRatio: nPlusOneRatio,
         totalVcpu: totalVcpuDemand
+      },
+      ghz: {
+        totalDemand: totalGhzDemand,
+        availableGhz: availableGhz,
+        shortfall: ghzShortfall,
+        hasWarning: ghzHasWarning,
+        recommendation: ghzRecommendation,
+        utilizationPct: ghzUtilizationPct
       }
     });
 
-  }, [numUsers, vcpuPerUser, ramPerUser, oversubscription, maxRamTarget, selectedCpuId, isHwLocked, lockedBladeCount, configMode, importData, isVsanEnabled, selectedDisk, raidPolicy, storagePerUser, diskConfigMode, manualDiskCount]);
+  }, [numUsers, vcpuPerUser, ramPerUser, peakGhzPerVm, oversubscription, maxRamTarget, selectedCpuId, isHwLocked, lockedBladeCount, configMode, importData, isVsanEnabled, selectedDisk, raidPolicy, storagePerUser, diskConfigMode, manualDiskCount]);
 
   // --- Helpers ---
   const ProgressBar = ({ label, value, limit, isCpu, isStorage }) => {
@@ -487,6 +531,14 @@ const VdiArchitectCalculator = () => {
                             <span className="text-blue-600 text-sm">{ramPerUser} GB</span>
                           </div>
                           <input type="range" min="4" max="64" step="4" value={ramPerUser} onChange={(e) => setRamPerUser(Number(e.target.value))} className="w-full accent-blue-600" />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-bold text-slate-500 uppercase mb-1">
+                            <span>Peak GHz Per VM</span>
+                            <span className="text-blue-600 text-sm">{peakGhzPerVm.toFixed(1)} GHz</span>
+                          </div>
+                          <input type="range" min="0.5" max="4.0" step="0.1" value={peakGhzPerVm} onChange={(e) => setPeakGhzPerVm(Number(e.target.value))} className="w-full accent-blue-600" />
                         </div>
 
                         <div>
@@ -723,12 +775,21 @@ const VdiArchitectCalculator = () => {
                   limit={90} 
                 />
                 
-                <ProgressBar 
-                  label="Active Compute Demand (Avg)" 
-                  value={result.cpuLoad} 
-                  limit={85} 
-                  isCpu 
+                <ProgressBar
+                  label="Active Compute Demand (Avg)"
+                  value={result.cpuLoad}
+                  limit={85}
+                  isCpu
                 />
+
+                {configMode === 'manual' && (
+                  <ProgressBar
+                    label="Peak GHz Demand"
+                    value={result.ghz.utilizationPct}
+                    limit={85}
+                    isCpu
+                  />
+                )}
 
                 {isVsanEnabled && (
                     <div className="mt-4 pt-4 border-t border-slate-100">
@@ -757,12 +818,53 @@ const VdiArchitectCalculator = () => {
                      <div>
                         <strong>Limiting Factor: {result.constraint}</strong>
                         <div className="text-blue-600/80">
-                            {result.constraint === 'STORAGE' 
-                                ? "Node count increased to satisfy vSAN capacity or disk-per-node limits." 
+                            {result.constraint === 'STORAGE'
+                                ? "Node count increased to satisfy vSAN capacity or disk-per-node limits."
+                                : result.constraint === 'GHZ'
+                                ? "Node count increased to meet peak GHz demand requirements."
                                 : "Hardware sized to keep Load safe at full growth."}
                         </div>
                      </div>
                 </div>
+
+                {/* GHz Warning/Recommendation */}
+                {configMode === 'manual' && result.ghz.recommendation && (
+                  <div className={`mt-4 p-3 border rounded text-xs flex items-start ${
+                    result.ghz.hasWarning
+                      ? result.ghz.utilizationPct > 100
+                        ? 'bg-red-50 border-red-200 text-red-800'
+                        : result.ghz.utilizationPct > 90
+                        ? 'bg-orange-50 border-orange-200 text-orange-800'
+                        : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                      : 'bg-green-50 border-green-200 text-green-800'
+                  }`}>
+                    <span className="mr-2 mt-0.5">
+                      {result.ghz.hasWarning ? <Icons.AlertTriangle /> : <Icons.Check />}
+                    </span>
+                    <div>
+                      <strong>
+                        {result.ghz.utilizationPct > 100
+                          ? 'GHz Capacity Exceeded'
+                          : result.ghz.utilizationPct > 90
+                          ? 'GHz Capacity Warning'
+                          : result.ghz.utilizationPct > 75
+                          ? 'GHz Capacity Notice'
+                          : 'GHz Capacity OK'}
+                      </strong>
+                      <div className={
+                        result.ghz.hasWarning
+                          ? result.ghz.utilizationPct > 100
+                            ? 'text-red-600/90'
+                            : result.ghz.utilizationPct > 90
+                            ? 'text-orange-600/90'
+                            : 'text-yellow-600/90'
+                          : 'text-green-600/90'
+                      }>
+                        {result.ghz.recommendation}
+                      </div>
+                    </div>
+                  </div>
+                )}
              </div>
 
              {/* Rack View */}
@@ -794,6 +896,35 @@ const VdiArchitectCalculator = () => {
                           <span>Resulting N+1 Ratio:</span>
                           <span className="text-white font-bold">{result.math.nPlusOneRatio.toFixed(2)} : 1</span>
                       </div>
+
+                      {/* GHz Demand Analysis */}
+                      <div className="pt-2 border-t border-slate-700 mt-2">
+                          <div className="text-[10px] uppercase mb-1 text-cyan-400 flex items-center">
+                              Peak GHz Analysis
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                              <span>Total GHz Demand:</span>
+                              <span>{result.ghz.totalDemand.toFixed(0)} GHz</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                              <span>Available GHz:</span>
+                              <span>{result.ghz.availableGhz.toFixed(0)} GHz</span>
+                          </div>
+                          <div className={`flex justify-between font-bold border-b border-slate-600 pb-1 mb-1 ${
+                            result.ghz.utilizationPct > 100 ? 'text-red-400' :
+                            result.ghz.utilizationPct > 90 ? 'text-orange-400' :
+                            result.ghz.utilizationPct > 75 ? 'text-yellow-400' : 'text-green-400'
+                          }`}>
+                              <span>GHz Utilization:</span>
+                              <span>{result.ghz.utilizationPct.toFixed(1)}%</span>
+                          </div>
+                          {result.ghz.shortfall > 0 && (
+                              <div className="bg-red-900/40 p-2 rounded text-[10px] text-red-200 mt-1">
+                                  <strong>Shortfall:</strong> {result.ghz.shortfall.toFixed(0)} GHz
+                              </div>
+                          )}
+                      </div>
+
                       <div className="flex justify-between text-emerald-300">
                           <span>Target Density:</span>
                           <span className="font-bold">{result.usersPerBlade} Users/Node</span>
